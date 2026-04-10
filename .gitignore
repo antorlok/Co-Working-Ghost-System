@@ -1,0 +1,27 @@
+# Virtual Environments
+venv/
+env/
+.venv/
+
+# Python Cache and Compiled Files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment Variables and Secrets (CRITICAL)
+.env
+*.pem
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE and Editor configurations
+.vscode/
+.idea/
+
+# Testing and Coverage
+.pytest_cache/
+coverage.xml
+htmlcov/
