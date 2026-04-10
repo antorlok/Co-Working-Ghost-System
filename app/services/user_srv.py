@@ -19,7 +19,7 @@ def create_user(user: UserCreate) -> dict:
     
     new_user = {
         "id": new_id,
-        "nombre": user.name,
+        "name": user.name,
         "email": user.email,
         "password": user.password # Pendiente: Encriptar esto más adelante
     }
@@ -30,7 +30,7 @@ def create_user(user: UserCreate) -> dict:
 def update_user(usuario_id: int, data: UserCreate) -> dict | None:
     user = get_by_id(usuario_id)
     if user:
-        user["nombre"] = data.name
+        user["name"] = data.name
         user["email"] = data.email
         user["password"] = data.password
         return user

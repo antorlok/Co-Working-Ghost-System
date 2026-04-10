@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 # 1. Base: Lo que es común para cualquier operación con usuarios
 class UserBase(BaseModel):
-    nombre: str = Field(..., min_length=3, max_length=50, description="Nombre completo del usuario")
+    name: str = Field(..., min_length=3, max_length=50, description="User full name")
     email: EmailStr # Requiere: pip install "pydantic[email]"
 
 # 2. Entrada: Lo que pedimos al momento de CREAR o ACTUALIZAR un usuario
