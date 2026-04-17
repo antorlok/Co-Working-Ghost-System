@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+sqlmodel
+alembic
+psycopg2-binary
+bcrypt<4.0.0
+passlib[bcrypt]
+pydantic[email]
+pytest
+httpx

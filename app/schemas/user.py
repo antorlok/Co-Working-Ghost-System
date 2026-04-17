@@ -1,18 +1,47 @@
-from pydantic import BaseModel, EmailStr, Field
+import re
+from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 
-# 1. Base: Lo que es común para cualquier operación con usuarios
 class UserBase(BaseModel):
     name: str = Field(..., min_length=3, max_length=50, description="User full name")
-    email: EmailStr # Requiere: pip install "pydantic[email]"
+    email: EmailStr
 
-# 2. Entrada: Lo que pedimos al momento de CREAR o ACTUALIZAR un usuario
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=8, description="Mínimo 8 caracteres para la contraseña")
+    password: str = Field(
+        ...,
+        min_length=8,
+        max_length=64,
+        description="8-64 chars, incluye mayuscula, minuscula, numero y simbolo",
+    )
 
-# 3. Salida: Lo que RESPONDEMOS al cliente (Fíjate que NO incluimos la contraseña)
+    @field_validator("password")
+    def validate_password(cls, v):
+        if not re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&._-])[A-Za-z\d@$!%*?&._-]+$", v):
+            raise ValueError("Password must contain uppercase, lowercase, digit, and symbol")
+        return v
+
 class UserResponse(UserBase):
     id: int
 
-    class Config:
-        # Permite a Pydantic leer datos directamente de diccionarios u ORMs de bases de datos
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+        
+
+class UserUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=3, max_length=50)
+    email: EmailStr | None = None
+    password: str | None = Field(
+        default=None,
+        min_length=8,
+        max_length=64,
+        description="8-64 chars, incluye mayuscula, minuscula, numero y simbolo",
+    )
+
+    @field_validator("password")
+    def validate_password(cls, v):
+        if v is not None and not re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&._-])[A-Za-z\d@$!%*?&._-]+$", v):
+            raise ValueError("Password must contain uppercase, lowercase, digit, and symbol")
+        return v
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
