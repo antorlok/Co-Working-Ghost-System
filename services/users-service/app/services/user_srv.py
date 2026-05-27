@@ -24,6 +24,7 @@ def create_user(session: Session, data: UserCreate) -> User:
         name=data.name,
         email=data.email,
         password_hash=hash_password(data.password),
+        role=data.role,
     )
     return repo.create(new_user)
 

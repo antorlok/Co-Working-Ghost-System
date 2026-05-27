@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
@@ -41,14 +45,15 @@ def test_hash_password():
     assert verify_password(pwd, hashed)
 
 def test_crud_and_exposure(session):
-    # Create
-    user_data = {"name": "Test User", "email": "test@example.com", "password": "StrongPassword1!"}
+    # Create a member user
+    user_data = {"name": "Test User", "email": "test@example.com", "password": "StrongPassword1!", "role": "member"}
     response = client.post("/usuarios/", json=user_data)
     assert response.status_code == 201
     data = response.json()
     assert "password" not in data
     assert "password_hash" not in data
     assert data["email"] == "test@example.com"
+    assert data["role"] == "member"
     user_id = data["id"]
 
     # Read
@@ -61,15 +66,37 @@ def test_crud_and_exposure(session):
     assert response.status_code == 200
     assert response.json()["name"] == "Updated User"
 
-    # Login
+    # Login as member
     response = client.post("/usuarios/login", json={"email": "test@example.com", "password": "StrongPassword1!"})
     assert response.status_code == 200
-    assert response.json()["message"] == "Login exitoso"
+    login_data = response.json()
+    assert "access_token" in login_data
+    assert login_data["token_type"] == "bearer"
+    member_token = login_data["access_token"]
 
-    # Delete
+    # Try to delete without token (should fail with 401)
     response = client.delete(f"/usuarios/{user_id}")
+    assert response.status_code == 401
+
+    # Try to delete with member token (should fail with 403 because only admin is allowed)
+    response = client.delete(f"/usuarios/{user_id}", headers={"Authorization": f"Bearer {member_token}"})
+    assert response.status_code == 403
+
+    # Register an admin user
+    admin_data = {"name": "Admin User", "email": "admin@example.com", "password": "StrongPassword1!", "role": "admin"}
+    response = client.post("/usuarios/", json=admin_data)
+    assert response.status_code == 201
+    
+    # Login as admin
+    response = client.post("/usuarios/login", json={"email": "admin@example.com", "password": "StrongPassword1!"})
+    assert response.status_code == 200
+    admin_token = response.json()["access_token"]
+
+    # Delete with admin token (should succeed with 204)
+    response = client.delete(f"/usuarios/{user_id}", headers={"Authorization": f"Bearer {admin_token}"})
     assert response.status_code == 204
     
     # Verify Delete
     response = client.get(f"/usuarios/{user_id}")
     assert response.status_code == 404
+

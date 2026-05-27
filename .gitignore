@@ -25,3 +25,7 @@ Thumbs.db
 .pytest_cache/
 coverage.xml
 htmlcov/
+
+# Local Databases
+*.db
+local.db

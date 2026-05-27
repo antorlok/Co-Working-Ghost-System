@@ -8,3 +8,6 @@ passlib[bcrypt]
 pydantic[email]
 pytest
 httpx
+pyjwt
+python-dotenv
+

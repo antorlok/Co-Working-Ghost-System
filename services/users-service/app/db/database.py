@@ -11,9 +11,10 @@ load_dotenv(BASE_DIR / ".env")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL no está definida en el entorno")
+    # Fallback local a PostgreSQL si no hay archivo .env
+    DATABASE_URL = "postgresql+psycopg2://postgres:postgres@localhost:5432/coworking_db"
 
-# Fix para Railway: Convierte el prefijo nativo de PostgreSQL al requerido por psycopg2
+# Compatibilidad y consistencia de dialecto para psycopg2
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
 elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+"):

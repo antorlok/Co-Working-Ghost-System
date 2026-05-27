@@ -13,3 +13,4 @@ class User(SQLModel, table=True):
         sa_column_kwargs={"unique": True, "nullable": False},
     )
     password_hash: str = Field(max_length=255, nullable=False)
+    role: str = Field(default="member", max_length=50, nullable=False)
