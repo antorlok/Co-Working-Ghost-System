@@ -23,8 +23,26 @@ services:
     container_name: coworking-users-service
     environment:
       - DATABASE_URL=postgresql+psycopg2://postgres:postgres@postgres-db:5432/coworking_db
+      - SECRET_KEY=coworking_secret_key_change_me_in_prod
     ports:
       - "8000:8000"
+    depends_on:
+      - postgres-db
+    restart: always
+
+  # 3. Servicio de Reservas (Rust / Axum)
+  reservations-service:
+    build:
+      context: ./services/reservations-service
+      dockerfile: Dockerfile
+    container_name: coworking-reservations-service
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres-db:5432/coworking_db
+      - SECRET_KEY=coworking_secret_key_change_me_in_prod
+      - PORT=8003
+      - RUST_LOG=reservations_service=debug,tower_http=debug,sqlx=warn
+    ports:
+      - "8003:8003"
     depends_on:
       - postgres-db
     restart: always

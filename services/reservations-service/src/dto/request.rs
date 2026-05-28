@@ -5,6 +5,7 @@ use validator::Validate;
 #[derive(Debug, Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct ReservaRequest {
+    #[validate(range(min = 1))]
     pub espacio_id: i64,
     pub nombre_espacio: Option<String>,
     #[validate(custom(function = "validate_future"))]

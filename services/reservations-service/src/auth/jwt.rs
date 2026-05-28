@@ -25,7 +25,7 @@ impl AuthUser {
 
 #[derive(Debug, Deserialize)]
 struct GhostClaims {
-    #[serde(default)]
+    #[serde(default, rename = "sub")]
     _sub: String,
     id: serde_json::Value,
     role: String,

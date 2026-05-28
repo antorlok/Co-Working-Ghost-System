@@ -1,12 +1,14 @@
 from datetime import datetime, timedelta, timezone
+import os
+
 import jwt
 from passlib.context import CryptContext
 
 # Mover la logica de criptografia al core para separar responsabilidades del servicio (SRP)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Configuración de JWT (en producción se leerían de variables de entorno)
-SECRET_KEY = "coworking_secret_key_change_me_in_prod"
+# Shared with reservations-service and other Ghost services (override via env in Docker)
+SECRET_KEY = os.getenv("SECRET_KEY", "coworking_secret_key_change_me_in_prod")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
