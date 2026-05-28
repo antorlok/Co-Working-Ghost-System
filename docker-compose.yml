@@ -1,0 +1,31 @@
+services:
+  # 1. Base de datos PostgreSQL local
+  postgres-db:
+    image: postgres:15
+    container_name: coworking-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: coworking_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  # 2. Servicio de Usuarios (FastAPI)
+  users-service:
+    build:
+      context: ./services/users-service
+      dockerfile: Dockerfile
+    container_name: coworking-users-service
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://postgres:postgres@coworking-postgres:5432/coworking_db
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres-db
+    restart: always
+
+volumes:
+  postgres_data:
