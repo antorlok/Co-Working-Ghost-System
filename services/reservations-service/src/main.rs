@@ -1,24 +1,11 @@
-mod algorithm;
-mod auth;
-mod config;
-mod dto;
-mod error;
-mod models;
-mod repository;
-mod routes;
-mod service;
-mod state;
-
 use std::net::SocketAddr;
 
-use axum::{middleware, Router};
 use sqlx::postgres::PgPoolOptions;
-use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-use crate::auth::jwt::jwt_middleware;
-use crate::config::Config;
-use crate::state::AppState;
+use reservations_service::build_app;
+use reservations_service::config::Config;
+use reservations_service::state::AppState;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -41,19 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState::new(config.clone(), db);
     state.reserva_service.inicializar_cola().await?;
 
-    let app = Router::new()
-        .merge(routes::router())
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            jwt_middleware,
-        ))
-        .layer(
-            CorsLayer::new()
-                .allow_origin(Any)
-                .allow_methods(Any)
-                .allow_headers(Any),
-        )
-        .with_state(state);
+    let app = build_app(state.clone());
 
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
     tracing::info!(%addr, "reservations-service listening");

@@ -123,4 +123,59 @@ mod tests {
         assert_eq!(cola.extraer_max().unwrap().id, 1);
         assert!(cola.extraer_max().is_none());
     }
+
+    #[test]
+    fn heap_vacio_no_devuelve_elementos() {
+        let mut cola = ColaPrioridad::new();
+        assert!(cola.esta_vacia());
+        assert_eq!(cola.tamanio(), 0);
+        assert!(cola.ver_siguiente().is_none());
+        assert!(cola.extraer_max().is_none());
+        assert!(cola.ver_cola().is_empty());
+    }
+
+    #[test]
+    fn un_solo_elemento_insertar_y_extraer() {
+        let mut cola = ColaPrioridad::new();
+        cola.insertar(reserva(42, 2));
+        assert_eq!(cola.tamanio(), 1);
+        assert_eq!(cola.ver_siguiente().unwrap().id, 42);
+        assert_eq!(cola.extraer_max().unwrap().id, 42);
+        assert!(cola.esta_vacia());
+    }
+
+    #[test]
+    fn ver_siguiente_es_el_mas_urgente_sin_extraer() {
+        let mut cola = ColaPrioridad::new();
+        cola.insertar(reserva(10, 3));
+        cola.insertar(reserva(20, 1));
+
+        assert_eq!(cola.ver_siguiente().unwrap().id, 20);
+        assert_eq!(cola.tamanio(), 2);
+        assert_eq!(cola.extraer_max().unwrap().id, 20);
+    }
+
+    #[test]
+    fn ver_cola_ordenada_por_prioridad_ascendente() {
+        let mut cola = ColaPrioridad::new();
+        cola.insertar(reserva(1, 3));
+        cola.insertar(reserva(2, 1));
+        cola.insertar(reserva(3, 2));
+
+        let ids: Vec<i64> = cola.ver_cola().into_iter().map(|r| r.id).collect();
+        assert_eq!(ids, vec![2, 3, 1]);
+    }
+
+    #[test]
+    fn empate_prioridad_mantiene_alguno_en_raiz() {
+        let mut cola = ColaPrioridad::new();
+        cola.insertar(reserva(100, 2));
+        cola.insertar(reserva(200, 2));
+
+        let primero = cola.extraer_max().unwrap().id;
+        let segundo = cola.extraer_max().unwrap().id;
+        assert!(primero == 100 || primero == 200);
+        assert!(segundo == 100 || segundo == 200);
+        assert_ne!(primero, segundo);
+    }
 }
