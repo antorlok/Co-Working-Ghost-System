@@ -43,6 +43,23 @@ services:
       - postgres-db
     restart: always
 
+  # 4. Servicio de Facturación y Reportes (Node.js/Express)
+  billing-service:
+    build:
+      context: ./services/billing-service
+      dockerfile: Dockerfile
+    container_name: coworking-billing-service
+    environment:
+      - PORT=8082
+      - DATABASE_URL=postgresql+psycopg2://postgres:postgres@postgres-db:5432/coworking_db
+      - SECRET_KEY=coworking_secret_key_change_me_in_prod
+    ports:
+      - "8082:8082"
+    depends_on:
+      - postgres-db
+    restart: always
+
 volumes:
   postgres_data:
+
 
