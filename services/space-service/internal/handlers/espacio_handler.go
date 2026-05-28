@@ -19,6 +19,15 @@ func NewEspacioHandler(repo *repository.EspacioRepository) *EspacioHandler {
 	return &EspacioHandler{repo: repo}
 }
 
+func parseEspacioID(idStr string) (uint, error) {
+	id, err := strconv.ParseUint(idStr, 10, strconv.IntSize)
+	if err != nil {
+		return 0, err
+	}
+
+	return uint(id), nil
+}
+
 // Crear registra un espacio físico nuevo en la base de datos (Admin solamente)
 func (h *EspacioHandler) Crear(c *gin.Context) {
 	var req models.EspacioRequest
@@ -54,13 +63,13 @@ func (h *EspacioHandler) ObtenerTodos(c *gin.Context) {
 // ObtenerPorID obtiene un espacio según su ID y lo devuelve al cliente
 func (h *EspacioHandler) ObtenerPorID(c *gin.Context) {
 	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 64)
+	id, err := parseEspacioID(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "El ID proporcionado no es válido"})
 		return
 	}
 
-	espacio, err := h.repo.ObtenerPorID(uint(id))
+	espacio, err := h.repo.ObtenerPorID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al buscar el espacio: " + err.Error()})
 		return
@@ -77,7 +86,7 @@ func (h *EspacioHandler) ObtenerPorID(c *gin.Context) {
 // Actualizar modifica la información de un espacio existente (Admin solamente)
 func (h *EspacioHandler) Actualizar(c *gin.Context) {
 	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 64)
+	id, err := parseEspacioID(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "El ID proporcionado no es válido"})
 		return
@@ -89,7 +98,7 @@ func (h *EspacioHandler) Actualizar(c *gin.Context) {
 		return
 	}
 
-	espacio, err := h.repo.Actualizar(uint(id), req)
+	espacio, err := h.repo.Actualizar(id, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al actualizar el espacio: " + err.Error()})
 		return
@@ -106,13 +115,13 @@ func (h *EspacioHandler) Actualizar(c *gin.Context) {
 // Eliminar realiza un borrado lógico (soft delete) del espacio en base de datos (Admin solamente)
 func (h *EspacioHandler) Eliminar(c *gin.Context) {
 	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 64)
+	id, err := parseEspacioID(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "El ID proporcionado no es válido"})
 		return
 	}
 
-	err = h.repo.Eliminar(uint(id))
+	err = h.repo.Eliminar(id)
 	if err != nil {
 		if err.Error() == "espacio no encontrado" {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})

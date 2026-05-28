@@ -11,6 +11,12 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d coworking_db"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     restart: always
 
   # 2. Servicio de Usuarios (FastAPI)
@@ -20,14 +26,34 @@ services:
       dockerfile: Dockerfile
     container_name: coworking-users-service
     environment:
-      - DATABASE_URL=postgresql+psycopg2://postgres:postgres@coworking-postgres:5432/coworking_db
+      - DATABASE_URL=postgresql+psycopg2://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres-db:5432/coworking_db
+      - SECRET_KEY=coworking_secret_key_change_me_in_prod
     ports:
       - "8000:8000"
     depends_on:
-      - postgres-db
+      postgres-db:
+        condition: service_healthy
     restart: always
 
-  # 3. Servicio de Espacios (Golang)
+  # 3. Servicio de Reservas (Rust / Axum)
+  reservations-service:
+    build:
+      context: ./services/reservations-service
+      dockerfile: Dockerfile
+    container_name: coworking-reservations-service
+    environment:
+      - DATABASE_URL=postgres://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres-db:5432/coworking_db
+      - SECRET_KEY=coworking_secret_key_change_me_in_prod
+      - PORT=8003
+      - RUST_LOG=reservations_service=debug,tower_http=debug,sqlx=warn
+    ports:
+      - "8003:8003"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    restart: always
+
+  # 4. Servicio de Espacios (Golang)
   space-service:
     build:
       context: ./services/space-service
@@ -35,14 +61,14 @@ services:
     container_name: coworking-space-service
     environment:
       - PORT=8081
-      - DATABASE_URL=postgresql+psycopg2://postgres:postgres@postgres-db:5432/coworking_db
+      - DATABASE_URL=postgresql+psycopg2://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres-db:5432/coworking_db
       - SECRET_KEY=coworking_secret_key_change_me_in_prod
     ports:
       - "8081:8081"
     depends_on:
-      - postgres-db
+      postgres-db:
+        condition: service_healthy
     restart: always
 
 volumes:
   postgres_data:
-
