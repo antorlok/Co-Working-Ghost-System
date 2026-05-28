@@ -29,3 +29,6 @@ htmlcov/
 # Local Databases
 *.db
 local.db
+
+# Rust
+target/
