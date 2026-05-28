@@ -27,5 +27,22 @@ services:
       - postgres-db
     restart: always
 
+  # 3. Servicio de Espacios (Golang)
+  space-service:
+    build:
+      context: ./services/space-service
+      dockerfile: Dockerfile
+    container_name: coworking-space-service
+    environment:
+      - PORT=8081
+      - DATABASE_URL=postgresql+psycopg2://postgres:postgres@postgres-db:5432/coworking_db
+      - SECRET_KEY=coworking_secret_key_change_me_in_prod
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres-db
+    restart: always
+
 volumes:
   postgres_data:
+
