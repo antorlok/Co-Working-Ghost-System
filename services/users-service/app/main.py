@@ -7,11 +7,21 @@ async def lifespan(app: FastAPI):
     # Ya no dependemos de create_all(), usamos Alembic.
     yield
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title="API de Usuarios Modular",
     description="API refactorizada implementando Clean Architecture",
     version="1.0.0",
     lifespan=lifespan
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(user_routes)
