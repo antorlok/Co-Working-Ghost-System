@@ -1,6 +1,6 @@
-# 🏢 Plataforma de Co-working - Arquitectura de Microservicios
+# 🏢 Plataforma de Co-working - Arquitectura de Microservicios & Frontend Premium
 
-Este repositorio contiene la arquitectura modular y distribuida para la plataforma de Co-working y Reservación de Espacios. Se compone de cuatro microservicios principales interconectados mediante una base de datos PostgreSQL compartida y validación criptográfica de Tokens JWT.
+Este repositorio contiene la arquitectura modular y distribuida para la plataforma de Co-working y Reservación de Espacios. Se compone de un frontend interactivo moderno y cuatro microservicios principales interconectados mediante una base de datos PostgreSQL compartida y validación criptográfica de Tokens JWT.
 
 ---
 
@@ -8,6 +8,9 @@ Este repositorio contiene la arquitectura modular y distribuida para la platafor
 
 ```text
 .
+├── frontend/                  # 💻 Next.js (App Router) - Puerto 3000
+│                              # Interfaz interactiva en Cosmic Dark con Glassmorphism.
+│
 ├── services/
 │   ├── users-service/         # 🔐 FastAPI (Python) - Puerto 8000
 │   │                          # Gestión de usuarios, roles (admin/member) y JWT.
@@ -76,6 +79,17 @@ Este repositorio contiene la arquitectura modular y distribuida para la platafor
   * `GET /billing/invoices` - Listar todas las facturas.
   * `GET /billing/reports` - Obtener reportes financieros y de consumo agregado.
 
+### 💻 Frontend Interactivo Premium (`frontend`)
+* **Tecnología**: React / Next.js (App Router) / Lucide Icons / CSS Modules.
+* **Puerto**: `3000`
+* **Estilo Visual**: Cosmic Dark / Glassmorphism de última generación, tipografía Outfity e Inter, gráficas SVG y micro-animaciones personalizadas.
+* **Responsabilidad**:
+  * **API Gateway Proxy**: Integración transparente (Next.js rewrites) a microservicios backend resolviendo 100% el CORS.
+  * **Cruce de Datos en Tiempo Real**: Resolución automática de IDs de miembro a **Nombre Completo** y **Correo Electrónico** en todos los listados de reservas, cobros de facturas y reportes analíticos.
+  * **Modales en Cristal Templado**: Unificación de alertas y confirmaciones mediante modales reactivos, logrando una app 100% libre de pop-ups nativos del navegador (`alert`/`confirm`).
+  * **Búsqueda Avanzada**: Barra de búsqueda por texto libre y filtros de estado reactivos aplicados en Reservas y Facturas.
+  * **Seeder Dev**: Botón discreto en login y script CLI (`npm run seed`) para poblar instantáneamente toda la DB con registros ficticios estructurados.
+
 ---
 
 ## 🐳 Guía de Inicio Rápido con Docker (Recomendado)
@@ -86,19 +100,20 @@ Este repositorio contiene la arquitectura modular y distribuida para la platafor
 ### Instrucciones de Inicio
 
 1. **Clona el repositorio** y navega a la carpeta raíz del proyecto.
-2. **Levanta todos los microservicios** de forma simultánea ejecutando:
+2. **Levanta todos los microservicios y el frontend** de forma simultánea ejecutando:
    ```bash
    docker compose up --build
    ```
 
 **¿Qué ocurre automáticamente al ejecutar este comando?**
 1. Se crea e inicia un contenedor con **PostgreSQL 15** expuesto en el puerto `5432`.
-2. Se compilan y arrancan los contenedores para `users-service`, `space-service`, `reservations-service` y `billing-service`.
+2. Se compilan y arrancan los contenedores para `users-service`, `space-service`, `reservations-service`, `billing-service` y el `frontend` en Next.js.
 3. El servicio de usuarios aplica automáticamente las migraciones de Alembic (`alembic upgrade head`).
 4. El servicio de espacios auto-migra su modelo mediante GORM.
 5. El servicio de reservas aplica sus migraciones nativas de SQLx para estructurar las tablas de reservas.
 6. El servicio de facturación inicializa la tabla `invoices` en la base de datos compartida si no existe.
-7. Todos los servicios quedan listos para recibir peticiones y comunicarse.
+7. El frontend compila la aplicación en Next.js lista para producción y se expone en **`http://localhost:3000`**.
+8. Todos los servicios quedan listos para recibir peticiones y comunicarse.
 
 ---
 

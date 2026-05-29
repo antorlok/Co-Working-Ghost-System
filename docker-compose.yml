@@ -86,5 +86,25 @@ services:
       - postgres-db
     restart: always
 
+  # 5. Frontend Next.js
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: coworking-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - USERS_SERVICE_URL=http://users-service:8000
+      - SPACE_SERVICE_URL=http://space-service:8081
+      - RESERVATIONS_SERVICE_URL=http://reservations-service:8003
+      - BILLING_SERVICE_URL=http://billing-service:8082
+    depends_on:
+      - users-service
+      - space-service
+      - reservations-service
+      - billing-service
+    restart: always
+
 volumes:
   postgres_data:

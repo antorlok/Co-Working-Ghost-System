@@ -5,14 +5,14 @@ WORKDIR /app
 
 # Cache dependency layer
 COPY Cargo.toml Cargo.lock ./
-RUN mkdir src && echo "fn main() {}" > src/main.rs \
+RUN mkdir src && touch src/lib.rs && echo "fn main() {}" > src/main.rs \
     && cargo build --release \
     && rm -rf src
 
 # Build application (migrations embedded via sqlx::migrate!)
 COPY migrations ./migrations
 COPY src ./src
-RUN touch src/main.rs && cargo build --release
+RUN touch src/lib.rs src/main.rs && cargo build --release
 
 # Runtime stage
 FROM debian:bookworm-slim
