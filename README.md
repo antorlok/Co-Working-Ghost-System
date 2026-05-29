@@ -1,6 +1,6 @@
-# Plataforma de Co-working - API de Usuarios (Monorepo)
+# 🏢 Plataforma de Co-working - Arquitectura de Microservicios
 
-Este repositorio contiene la arquitectura modular para la plataforma de Co-working y Reservación de Espacios. Actualmente implementa el módulo de **Usuarios, Roles y Autenticación con JWT** bajo principios de **Clean Architecture (Arquitectura Limpia)**.
+Este repositorio contiene la arquitectura modular y distribuida para la plataforma de Co-working y Reservación de Espacios. Se compone de cuatro microservicios principales interconectados mediante una base de datos PostgreSQL compartida y validación criptográfica de Tokens JWT.
 
 ---
 
@@ -9,96 +9,175 @@ Este repositorio contiene la arquitectura modular para la plataforma de Co-worki
 ```text
 .
 ├── services/
-│   └── users-service/    # Servicio de Usuarios en FastAPI (Python)
-│       ├── app/          # Código fuente principal (Clean Architecture)
-│       ├── alembic/      # Migraciones de base de datos
-│       ├── tests/        # Pruebas unitarias de Pytest
-│       └── Dockerfile    # Empaquetado Docker del servicio
-├── arquitectura.md       # Explicación completa del diseño técnico
-├── docker-compose.yml    # Orquestador local del ecosistema
-└── README.md             # Guía de inicio rápido
+│   ├── users-service/         # 🔐 FastAPI (Python) - Puerto 8000
+│   │                          # Gestión de usuarios, roles (admin/member) y JWT.
+│   │
+│   ├── space-service/         # 🏢 Go / Gin / GORM - Puerto 8081
+│   │                          # CRUD de espacios de co-working con Soft Deletes.
+│   │
+│   ├── reservations-service/  # 📅 Axum (Rust) - Puerto 8003
+│   │                          # Motor de reservas y cola de confirmación.
+│   │
+│   └── billing-service/       # 🧾 Express.js (Node.js) - Puerto 8082
+│                              # Facturación, cálculo automático de reportes e ingresos.
+│
+├── docker-compose.yml         # 🐳 Orquestador local multi-contenedor
+└── README.md                  # 📖 Guía de inicio rápido e integración
 ```
 
 ---
 
-## 🐳 Guía de Inicio Rápido con Docker (Recomendado)
+## ⚡ Especificación de Microservicios
 
-La forma más rápida de iniciar el proyecto y tener tanto **PostgreSQL** como la **API de Usuarios** funcionando juntos es utilizando **Docker Compose**.
+### 1. 🔐 Servicio de Usuarios (`users-service`)
+* **Tecnología**: Python 3.10 / FastAPI / SQLAlchemy / Alembic / Pytest.
+* **Puerto**: `8000`
+* **Responsabilidad**:
+  * Autenticación segura mediante tokens **JWT** (algoritmo HS256, firma compartida).
+  * Control de acceso basado en roles (`admin` vs `member`).
+  * Registro y gestión de perfiles de usuario.
+* **Documentación Interactiva**: [http://localhost:8000/docs](http://localhost:8000/docs) (Swagger UI)
+
+### 2. 🏢 Servicio de Espacios (`space-service`)
+* **Tecnología**: Go (Golang) / Gin Web Framework / GORM.
+* **Puerto**: `8081`
+* **Responsabilidad**:
+  * Catálogo de espacios de coworking (salas de juntas, escritorios, oficinas privadas).
+  * Soporte nativo para Soft Deletes (`deleted_at` vía GORM).
+  * Auto-migración automática de esquemas al arrancar.
+* **Endpoints Clave**:
+  * `GET /spaces` - Listar espacios activos.
+  * `POST /spaces` - Crear espacio (Requiere cabecera `Authorization: Bearer <JWT>` con rol `admin`).
+  * `DELETE /spaces/:id` - Eliminación lógica de espacio (Requiere rol `admin`).
+
+### 3. 📅 Servicio de Reservas (`reservations-service`)
+* **Tecnología**: Rust / Axum / SQLx (Postgres) / Tokio / Validator.
+* **Puerto**: `8003`
+* **Responsabilidad**:
+  * Motor de creación, consulta y cancelación de reservas.
+  * Implementación de una cola de confirmación para gestionar turnos y solapamientos en espacios de alta demanda.
+  * Validación criptográfica de claims JWT en Rust.
+* **Endpoints Clave**:
+  * `POST /reservas` - Crear una reserva (Requiere token JWT).
+  * `GET /reservas/mis-reservas` - Listar reservas del usuario autenticado.
+  * `DELETE /reservas/{id}` - Cancelar una reserva.
+  * `GET /cola` - Ver el estado de la cola de confirmación (Requiere rol `admin`).
+  * `POST /cola/confirmar` - Confirmar la siguiente reserva en la cola (Requiere rol `admin`).
+
+### 4. 🧾 Servicio de Facturación y Reportes (`billing-service`)
+* **Tecnología**: Node.js / Express.js / `pg` (PostgreSQL Client Pool).
+* **Puerto**: `8082`
+* **Responsabilidad**:
+  * Generación y registro de facturas asociadas a reservas (`invoices`).
+  * Consultas rápidas y agregación eficiente con complejidad $O(N)$ para reportes financieros y de uso.
+  * Inicialización automática del esquema de tablas de facturación.
+* **Endpoints Clave**:
+  * `POST /billing/invoice` - Crear nueva factura.
+  * `GET /billing/invoices` - Listar todas las facturas.
+  * `GET /billing/reports` - Obtener reportes financieros y de consumo agregado.
+
+---
+
+## 🐳 Guía de Inicio Rápido con Docker (Recomendado)
 
 ### Prerrequisitos
 * Tener instalado **Docker** y **Docker Compose**.
 
 ### Instrucciones de Inicio
 
-1. **Clona el repositorio** y colócate en la raíz del proyecto.
-2. **Levanta todo el ecosistema** ejecutando:
+1. **Clona el repositorio** y navega a la carpeta raíz del proyecto.
+2. **Levanta todos los microservicios** de forma simultánea ejecutando:
    ```bash
-   docker-compose up --build
+   docker compose up --build
    ```
 
-**¿Qué hace este comando automáticamente?**
-* Descarga e inicia un contenedor con **PostgreSQL 15** en el puerto `5432` con volumen persistente (tus datos no se borran al apagar).
-* Compila la imagen de **FastAPI** (`users-service`) y la expone en el puerto `8000`.
-* Ejecuta automáticamente todas las migraciones de base de datos pendientes (`alembic upgrade head`) para crear y estructurar las tablas en PostgreSQL.
-* Inicia el servidor de FastAPI listo para recibir peticiones.
+**¿Qué ocurre automáticamente al ejecutar este comando?**
+1. Se crea e inicia un contenedor con **PostgreSQL 15** expuesto en el puerto `5432`.
+2. Se compilan y arrancan los contenedores para `users-service`, `space-service`, `reservations-service` y `billing-service`.
+3. El servicio de usuarios aplica automáticamente las migraciones de Alembic (`alembic upgrade head`).
+4. El servicio de espacios auto-migra su modelo mediante GORM.
+5. El servicio de reservas aplica sus migraciones nativas de SQLx para estructurar las tablas de reservas.
+6. El servicio de facturación inicializa la tabla `invoices` en la base de datos compartida si no existe.
+7. Todos los servicios quedan listos para recibir peticiones y comunicarse.
 
 ---
 
-## 🛠️ Guía de Desarrollo Local (Sin Docker para la API)
+## 🧪 Pruebas de Integración y Flujo Completo (Consola / cURL)
 
-Si prefieres correr la base de datos en Docker pero programar y debuggear tu API de FastAPI directamente en tu entorno local:
+A continuación se muestra un flujo completo paso a paso para probar los cuatro servicios de forma integrada.
 
-### 1. Inicia solo PostgreSQL en Docker
+### Paso 1: Registrar un Administrador (`users-service`)
+Crea un usuario administrador para poder interactuar con los endpoints protegidos.
 ```bash
-docker run --name local-postgres \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=coworking_db \
-  -p 5432:5432 \
-  -d postgres:15
+curl -X POST http://localhost:8000/usuarios/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin_user",
+    "email": "admin@coworking.com",
+    "password": "SuperSecretPassword123",
+    "role": "admin"
+  }'
 ```
 
-### 2. Configura tu Entorno de Python
+### Paso 2: Obtener Token JWT (Login)
+Inicia sesión con el usuario creado para obtener el token de acceso.
 ```bash
-cd services/users-service
+curl -X POST http://localhost:8000/usuarios/login \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=admin_user&password=SuperSecretPassword123"
+```
+> 💡 *Guarda el valor de `access_token` devuelto por este endpoint.*
 
-# Crea y activa el entorno virtual
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Instala todas las dependencias
-pip install -r requirements.txt
+### Paso 3: Crear un Espacio de Trabajo (`space-service`)
+Usa el token obtenido (reemplaza `<TOKEN>` abajo) para crear un espacio de co-working:
+```bash
+curl -X POST http://localhost:8081/spaces \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Sala de Juntas Ejecutiva",
+    "description": "Espacio premium con pantalla 4K y capacidad para 12 personas",
+    "price_per_hour": 25.50
+  }'
 ```
 
-### 3. Aplica las Migraciones de la Base de Datos
+### Paso 4: Reservar el Espacio (`reservations-service`)
+Usa el mismo token JWT para realizar una reserva para el espacio que acabas de crear (por ejemplo, con ID `1`):
 ```bash
-alembic upgrade head
+curl -X POST http://localhost:8003/reservas \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "espacio_id": 1,
+    "fecha": "2026-06-01",
+    "hora_inicio": 9,
+    "hora_fin": 12
+  }'
 ```
 
-### 4. Inicia el Servidor de Desarrollo
+### Paso 5: Generar una Factura (`billing-service`)
+Genera una factura asociada a la reserva de espacio recién creada (por ejemplo, con ID `1`):
 ```bash
-uvicorn app.main:app --reload
+curl -X POST http://localhost:8082/billing/invoice \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reserva_id": 1,
+    "monto": 76.50,
+    "estado": "pagado"
+  }'
+```
+
+### Paso 6: Consultar Reportes de Facturación (`billing-service`)
+Obtén las métricas y el consolidado financiero calculado dinámicamente:
+```bash
+curl http://localhost:8082/billing/reports
 ```
 
 ---
 
-## 🚀 Probar la API y su Documentación
-
-Una vez levantado el servidor (sea con Docker Compose o localmente):
-
-1. Abre tu navegador e ingresa a la documentación interactiva:
-   👉 **Swagger UI:** [http://localhost:8000/docs](http://localhost:8000/docs)
-2. Crea un usuario con el endpoint `POST /usuarios/`.
-3. Inicia sesión con el endpoint `POST /usuarios/login` y obtén tu Token JWT seguro para autorizar las peticiones protegidas.
-
----
-
-## 🧪 Pruebas Unitarias
-El proyecto cuenta con un conjunto robusto de pruebas automatizadas que utilizan una base de datos en memoria sumamente veloz para no interferir con tu base de datos de desarrollo.
-
-Para ejecutarlas:
+## 🛑 Apagar el Ecosistema
+Para detener todos los contenedores y liberar los puertos asignados de tu máquina, ejecuta:
 ```bash
-cd services/users-service
-source .venv/bin/activate
-pytest tests/
+docker compose down
 ```
+> *Si deseas eliminar también los volúmenes persistentes de la base de datos para realizar un reinicio limpio, puedes usar `docker compose down -v`.*
