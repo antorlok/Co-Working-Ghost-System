@@ -74,6 +74,7 @@ func main() {
 	{
 		// Rutas públicas de consulta
 		api.GET("", espacioHandler.ObtenerTodos)
+		api.GET("/buscar", espacioHandler.Buscar)
 		api.GET("/:id", espacioHandler.ObtenerPorID)
 
 		// Rutas de administración protegidas por JWT y RBAC (Solo admin)

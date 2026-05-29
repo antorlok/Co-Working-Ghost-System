@@ -3,9 +3,11 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/coworking/space-service/internal/models"
 	"github.com/coworking/space-service/internal/repository"
+	"github.com/coworking/space-service/pkg/algorithm"
 	"github.com/gin-gonic/gin"
 )
 
@@ -133,3 +135,42 @@ func (h *EspacioHandler) Eliminar(c *gin.Context) {
 
 	c.Status(http.StatusNoContent)
 }
+
+// Buscar realiza una búsqueda en memoria de espacios utilizando el algoritmo seleccionado (?algoritmo=lineal|binaria).
+// También calcula el tiempo exacto que le toma a la búsqueda ejecutarse para comparar eficiencia.
+func (h *EspacioHandler) Buscar(c *gin.Context) {
+	query := c.Query("q")
+	algoritmo := c.DefaultQuery("algoritmo", "binaria")
+
+	// Obtenemos todos los espacios activos sin filtros específicos para buscar en el slice completo
+	espacios, err := h.repo.ObtenerTodos(0, 0, false)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al consultar los espacios para la búsqueda: " + err.Error()})
+		return
+	}
+
+	var filtrados []models.Espacio
+	inicio := time.Now()
+
+	switch algoritmo {
+	case "lineal":
+		filtrados = algorithm.BusquedaLineal(espacios, query)
+	case "binaria":
+		filtrados = algorithm.BusquedaBinaria(espacios, query)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Algoritmo no válido. Use 'lineal' o 'binaria'"})
+		return
+	}
+
+	duracion := time.Since(inicio)
+
+	c.JSON(http.StatusOK, gin.H{
+		"algoritmo":  algoritmo,
+		"busqueda":   query,
+		"tiempo_ns":  duracion.Nanoseconds(),
+		"tiempo_ms":  float64(duracion.Nanoseconds()) / 1e6,
+		"resultados": filtrados,
+		"cantidad":   len(filtrados),
+	})
+}
+
