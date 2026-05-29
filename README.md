@@ -1,6 +1,6 @@
 # 🏢 Plataforma de Co-working - Arquitectura de Microservicios
 
-Este repositorio contiene la arquitectura modular y distribuida para la plataforma de Co-working y Reservación de Espacios. Se compone de tres microservicios principales interconectados mediante una base de datos PostgreSQL compartida y validación criptográfica de Tokens JWT.
+Este repositorio contiene la arquitectura modular y distribuida para la plataforma de Co-working y Reservación de Espacios. Se compone de cuatro microservicios principales interconectados mediante una base de datos PostgreSQL compartida y validación criptográfica de Tokens JWT.
 
 ---
 
@@ -9,17 +9,20 @@ Este repositorio contiene la arquitectura modular y distribuida para la platafor
 ```text
 .
 ├── services/
-│   ├── users-service/      # 🔐 FastAPI (Python) - Puerto 8000
-│   │                       # Gestión de usuarios, roles (admin/member) y JWT.
+│   ├── users-service/         # 🔐 FastAPI (Python) - Puerto 8000
+│   │                          # Gestión de usuarios, roles (admin/member) y JWT.
 │   │
-│   ├── space-service/      # 🚗 Go / Gin / GORM - Puerto 8081
-│   │                       # CRUD de espacios de co-working con Soft Deletes.
+│   ├── space-service/         # 🏢 Go / Gin / GORM - Puerto 8081
+│   │                          # CRUD de espacios de co-working con Soft Deletes.
 │   │
-│   └── billing-service/    # 🧾 Express.js (Node.js) - Puerto 8082
-│                           # Facturación, cálculo automático de reportes e ingresos.
+│   ├── reservations-service/  # 📅 Axum (Rust) - Puerto 8003
+│   │                          # Motor de reservas y cola de confirmación.
+│   │
+│   └── billing-service/       # 🧾 Express.js (Node.js) - Puerto 8082
+│                              # Facturación, cálculo automático de reportes e ingresos.
 │
-├── docker-compose.yml      # 🐳 Orquestador local multi-contenedor
-└── README.md               # 📖 Guía de inicio rápido e integración
+├── docker-compose.yml         # 🐳 Orquestador local multi-contenedor
+└── README.md                  # 📖 Guía de inicio rápido e integración
 ```
 
 ---
@@ -35,7 +38,7 @@ Este repositorio contiene la arquitectura modular y distribuida para la platafor
   * Registro y gestión de perfiles de usuario.
 * **Documentación Interactiva**: [http://localhost:8000/docs](http://localhost:8000/docs) (Swagger UI)
 
-### 2. 🏛️ Servicio de Espacios (`space-service`)
+### 2. 🏢 Servicio de Espacios (`space-service`)
 * **Tecnología**: Go (Golang) / Gin Web Framework / GORM.
 * **Puerto**: `8081`
 * **Responsabilidad**:
@@ -47,7 +50,21 @@ Este repositorio contiene la arquitectura modular y distribuida para la platafor
   * `POST /spaces` - Crear espacio (Requiere cabecera `Authorization: Bearer <JWT>` con rol `admin`).
   * `DELETE /spaces/:id` - Eliminación lógica de espacio (Requiere rol `admin`).
 
-### 3. 🧾 Servicio de Facturación y Reportes (`billing-service`)
+### 3. 📅 Servicio de Reservas (`reservations-service`)
+* **Tecnología**: Rust / Axum / SQLx (Postgres) / Tokio / Validator.
+* **Puerto**: `8003`
+* **Responsabilidad**:
+  * Motor de creación, consulta y cancelación de reservas.
+  * Implementación de una cola de confirmación para gestionar turnos y solapamientos en espacios de alta demanda.
+  * Validación criptográfica de claims JWT en Rust.
+* **Endpoints Clave**:
+  * `POST /reservas` - Crear una reserva (Requiere token JWT).
+  * `GET /reservas/mis-reservas` - Listar reservas del usuario autenticado.
+  * `DELETE /reservas/{id}` - Cancelar una reserva.
+  * `GET /cola` - Ver el estado de la cola de confirmación (Requiere rol `admin`).
+  * `POST /cola/confirmar` - Confirmar la siguiente reserva en la cola (Requiere rol `admin`).
+
+### 4. 🧾 Servicio de Facturación y Reportes (`billing-service`)
 * **Tecnología**: Node.js / Express.js / `pg` (PostgreSQL Client Pool).
 * **Puerto**: `8082`
 * **Responsabilidad**:
@@ -57,7 +74,7 @@ Este repositorio contiene la arquitectura modular y distribuida para la platafor
 * **Endpoints Clave**:
   * `POST /billing/invoice` - Crear nueva factura.
   * `GET /billing/invoices` - Listar todas las facturas.
-  * `GET /billing/reports` - Obtener reportes financieros y de consumo agregado (Ingresos totales, promedio de montos, y conteo de estados de factura).
+  * `GET /billing/reports` - Obtener reportes financieros y de consumo agregado.
 
 ---
 
@@ -76,17 +93,18 @@ Este repositorio contiene la arquitectura modular y distribuida para la platafor
 
 **¿Qué ocurre automáticamente al ejecutar este comando?**
 1. Se crea e inicia un contenedor con **PostgreSQL 15** expuesto en el puerto `5432`.
-2. Se compilan y arrancan los contenedores para `users-service`, `space-service` y `billing-service`.
-3. El servicio de usuarios aplica automáticamente las migraciones pendientes vía Alembic (`alembic upgrade head`).
+2. Se compilan y arrancan los contenedores para `users-service`, `space-service`, `reservations-service` y `billing-service`.
+3. El servicio de usuarios aplica automáticamente las migraciones de Alembic (`alembic upgrade head`).
 4. El servicio de espacios auto-migra su modelo mediante GORM.
-5. El servicio de facturación inicializa la tabla `invoices` en la base de datos compartida si no existe.
-6. Todos los servicios quedan listos para recibir peticiones y comunicarse.
+5. El servicio de reservas aplica sus migraciones nativas de SQLx para estructurar las tablas de reservas.
+6. El servicio de facturación inicializa la tabla `invoices` en la base de datos compartida si no existe.
+7. Todos los servicios quedan listos para recibir peticiones y comunicarse.
 
 ---
 
 ## 🧪 Pruebas de Integración y Flujo Completo (Consola / cURL)
 
-A continuación se muestra un flujo completo paso a paso para probar los tres servicios de forma integrada.
+A continuación se muestra un flujo completo paso a paso para probar los cuatro servicios de forma integrada.
 
 ### Paso 1: Registrar un Administrador (`users-service`)
 Crea un usuario administrador para poder interactuar con los endpoints protegidos.
@@ -123,19 +141,33 @@ curl -X POST http://localhost:8081/spaces \
   }'
 ```
 
-### Paso 4: Generar una Factura (`billing-service`)
-Genera una factura asociada a una reserva de espacio:
+### Paso 4: Reservar el Espacio (`reservations-service`)
+Usa el mismo token JWT para realizar una reserva para el espacio que acabas de crear (por ejemplo, con ID `1`):
+```bash
+curl -X POST http://localhost:8003/reservas \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "espacio_id": 1,
+    "fecha": "2026-06-01",
+    "hora_inicio": 9,
+    "hora_fin": 12
+  }'
+```
+
+### Paso 5: Generar una Factura (`billing-service`)
+Genera una factura asociada a la reserva de espacio recién creada (por ejemplo, con ID `1`):
 ```bash
 curl -X POST http://localhost:8082/billing/invoice \
   -H "Content-Type: application/json" \
   -d '{
-    "reserva_id": 101,
+    "reserva_id": 1,
     "monto": 76.50,
     "estado": "pagado"
   }'
 ```
 
-### Paso 5: Consultar Reportes de Facturación (`billing-service`)
+### Paso 6: Consultar Reportes de Facturación (`billing-service`)
 Obtén las métricas y el consolidado financiero calculado dinámicamente:
 ```bash
 curl http://localhost:8082/billing/reports
